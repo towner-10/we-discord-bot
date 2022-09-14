@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
-const { setWeek, getWeek,  authorizeAndFetch } = require('../helpers/weeklySchedule.js');
+const { setWeek, getWeek, authorizeAndFetch } = require('../helpers/weeklySchedule.js');
 
 module.exports = {
         data: new SlashCommandBuilder()
@@ -8,8 +8,10 @@ module.exports = {
                 .addIntegerOption(option => option.setName('week').setDescription('The week number into the current school year').setRequired(true))
                 .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
         async execute(interaction) {
+
                 // Check if the user has the correct role
-                if (!interaction.member.roles.cache.some(role => role.name === process.env.ADMIN_ROLE)) return await interaction.reply({ content: 'You don\'t have the correct role to do this!', ephemeral: true });
+                if (!interaction.member.roles.cache.some(role => role.name === process.env.ADMIN_ROLE))
+                        return await interaction.reply({ content: 'You don\'t have the correct role to do this!', ephemeral: true });
 
                 // Check response to see if data was successfully added to the file
                 const added = await setWeek(interaction.options.getInteger('week'));
@@ -19,24 +21,24 @@ module.exports = {
                         const data = await authorizeAndFetch();
                         if (data.length > 0) {
 
-                            // Generate embed for the schedule with all classes
-                            let scheduleEmbed = new EmbedBuilder().setTitle(`Week ${getWeek()}`).setColor(0x9a6dbe);
-                            let fields = [];
+                                // Generate embed for the schedule with all classes
+                                const scheduleEmbed = new EmbedBuilder().setTitle(`Week ${getWeek()}`).setColor(0x9a6dbe);
+                                const fields = [];
 
-                            // Create a list of all of the schedule items for each class
-                            data.forEach(classElement => {
-                                let scheduleItems = "";
-                                classElement.items.forEach(item => {
-                                    scheduleItems += (item + "\n");
+                                // Create a list of all of the schedule items for each class
+                                data.forEach(classElement => {
+                                        let scheduleItems = "";
+                                        classElement.items.forEach(item => {
+                                                scheduleItems += (item + "\n");
+                                        });
+                                        fields.push({ name: classElement.class, value: scheduleItems });
                                 });
-                                fields.push({ name: classElement.class, value: scheduleItems });
-                            });
 
-                            scheduleEmbed.addFields(fields);
-                            await interaction.followUp({embeds: [scheduleEmbed]});
+                                scheduleEmbed.addFields(fields);
+                                await interaction.followUp({ embeds: [scheduleEmbed] });
                         }
                         else {
-                            await interaction.reply({ content: 'Could not send weekly schedule! A fatal error has occurred, check console.', ephemeral: true });
+                                await interaction.reply({ content: 'Could not send weekly schedule! A fatal error has occurred, check console.', ephemeral: true });
                         }
                 } else {
                         await interaction.reply({ content: 'Could not update the current week! Try again later.', ephemeral: true });

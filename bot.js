@@ -24,10 +24,18 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
 }
 
+exitProcess = () => {
+    console.log('\n⏳ Stopping bot...');
+    client.destroy();
+    console.log(`✅ Bot stopped. Goodbye! - Timestamp: ${Date.now()}`);
+}
+
 client.once('ready', async () => {
     await authorizeAndFetch();
-    console.log('Ready!');
+    console.log(`✅ Ready! - Timestamp: ${Date.now()}`);
 });
+
+process.on('SIGINT', () => exitProcess());
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
