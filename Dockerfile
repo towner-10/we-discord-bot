@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:bullseye-slim
 
 RUN mkdir -p /usr/src/bot
 WORKDIR /usr/src/bot

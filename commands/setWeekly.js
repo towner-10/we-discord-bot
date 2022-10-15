@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { setWeek } = require('../helpers/weeklySchedule.js');
 
 module.exports = {
@@ -15,7 +15,13 @@ module.exports = {
                 const added = await setWeek(interaction.options.getInteger('week'));
 
                 if (added === true) {
-                        await interaction.reply({ content: `Updated the current week to ${interaction.options.getInteger('week')}!`, ephemeral: true });
+                        // Create the buttons
+                        const row = new ActionRowBuilder().addComponents(
+                                new ButtonBuilder().setCustomId('post-weekly').setLabel('Post Schedule').setStyle(ButtonStyle.Primary),
+                                new ButtonBuilder().setCustomId('test-weekly').setLabel('Test Schedule').setStyle(ButtonStyle.Secondary),
+                        );
+
+                        await interaction.reply({ content: `Updated the current week to ${interaction.options.getInteger('week')}!`, ephemeral: true, components: [row] });
                 } else {
                         await interaction.reply({ content: 'Could not update the current week! Try again later.', ephemeral: true });
                 }

@@ -33,6 +33,60 @@ module.exports.setWeek = async (week) => {
 }
 
 /**
+ * Creates an embed with the current weeks schedule.
+ * @param {*} className The name of the class to get the schedule for.
+ * @returns Either an Embed containing the weekly schedule, weekly schedule for a specific class, or an error message.
+ */
+module.exports.createEmbed = (className = undefined) => {
+    const { EmbedBuilder } = require('discord.js');
+
+    if (scheduleData.length > 0) {
+
+        const scheduleEmbed = new EmbedBuilder().setColor(0x9a6dbe);
+
+        // If a class name was provided, only show the schedule for that class.
+        if (className) {
+            // Generate embed for the schedule
+            scheduleEmbed.setTitle(`${className} - Week ${weekData["week"]}`);
+
+            // Create a list of all of the schedule items
+            scheduleData.forEach(classElement => {
+                if (classElement.class === className) {
+                    let scheduleItems = '';
+                    classElement.items.forEach(item => {
+                        scheduleItems += (item + '\n');
+                    });
+                    scheduleEmbed.setDescription(scheduleItems);
+                }
+            });
+
+            return scheduleEmbed;
+        }
+
+        // Generate embed for the schedule with all classes
+        scheduleEmbed.setTitle(`Week ${weekData["week"]}`);
+        const fields = [];
+
+        // Create a list of all of the schedule items for each class
+        scheduleData.forEach(classElement => {
+            let scheduleItems = "";
+
+            classElement.items.forEach(item => {
+                scheduleItems += (item + "\n");
+            });
+
+            if (classElement.class !== "") fields.push({ name: classElement.class, value: scheduleItems });
+        });
+
+        scheduleEmbed.addFields(fields);
+
+        return scheduleEmbed;
+    }
+
+    return new EmbedBuilder().setTitle(`Week ${weekData["week"]}`).setColor(0x9a6dbe).setDescription("No schedule data found!");
+}
+
+/**
  * Authorize with Google and fetch the current weeks schedule.
  */
 module.exports.authorizeAndFetch = async () => {
@@ -45,19 +99,20 @@ module.exports.authorizeAndFetch = async () => {
         const client = await auth.getClient();
         const googleSheets = google.sheets({ version: "v4", auth: client });
 
+        console.log(`⌛ Fetching schedule data from Google Sheets API`);
+
         try {
-
-            console.log(`⌛ Fetching schedule data from Google Sheets API`);
-
             // Fetch the table from the API given the corresponding Week sheet.
             const getRows = await googleSheets.spreadsheets.values.get({
                 auth,
                 spreadsheetId: SPREADSHEET_ID,
-                range: `Week ${weekData["week"]}!A1:AA1000`
+                range: `Week ${weekData["week"]}`
             });
 
             // Reset the schedule data.
             scheduleData = [];
+
+            if (getRows.status !== 200) throw new Error(`Error fetching data from Google Sheets API. Status code: ${getRows.status}`);
 
             // Go through the headers and setup the initial objects in the schedule data array.
             for (let col = 0; col < getRows.data.values[0].length; col++) {
@@ -76,7 +131,7 @@ module.exports.authorizeAndFetch = async () => {
 
             console.log(`✅ Successfully fetched & updated the current schedule`);
         } catch (err) {
-            console.log("❌ Unable to fetch the correct rows! Try changing the current week.");
+            console.error("❌ Unable to fetch the correct rows! Try changing the current week.");
         }
 
         return scheduleData;
