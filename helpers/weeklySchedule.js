@@ -1,18 +1,54 @@
 const fs = require('fs').promises;
-const path = require('path');
 const process = require('process');
-const { google } = require('googleapis');
+const { Client } = require("@notionhq/client");
+const dayjs = require('dayjs');
 
 let weekData = require("../currentWeek.json");
-let scheduleData = [];
 
-// Variables for Google Sheets API
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-const CREDENTIALS_PATH = path.join(process.cwd(), './credentials.json');
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+const notion = new Client({
+    auth: process.env.NOTION_TOKEN,
+});
 
 module.exports.getWeek = () => weekData["week"];
-module.exports.getScheduleData = () => scheduleData;
+
+async function fetchSchedule(className = undefined) {
+    if (className) {
+        const scheduleData = await notion.databases.query({
+            database_id: process.env.NOTION_DATABASE_ID,
+            filter: {
+                and: [
+                    {
+                        property: 'Tags',
+                        multi_select: {
+                            contains: className,
+                        }
+                    },
+                    {
+                        property: 'Tags',
+                        multi_select: {
+                            contains: `Week ${weekData["week"]}`,
+                        }
+                    },
+                ],
+            }
+        });
+
+        return scheduleData.results;
+    }
+
+    const scheduleData = await notion.databases.query({
+        database_id: process.env.NOTION_DATABASE_ID,
+        filter: {
+            property: 'Tags',
+            multi_select: {
+                contains: `Week ${weekData["week"]}`,
+            }
+        }
+    });
+
+    return scheduleData.results;
+}
+
 
 /**
  * Set the current week and write it to the storage file.
@@ -32,50 +68,62 @@ module.exports.setWeek = async (week) => {
     }
 }
 
+
+
 /**
  * Creates an embed with the current weeks schedule.
  * @param {*} className The name of the class to get the schedule for.
  * @returns Either an Embed containing the weekly schedule, weekly schedule for a specific class, or an error message.
  */
-module.exports.createEmbed = (className = undefined) => {
+module.exports.createEmbed = async (className = undefined) => {
     const { EmbedBuilder } = require('discord.js');
 
-    if (scheduleData.length > 0) {
+    const scheduleEmbed = new EmbedBuilder().setColor(0x9a6dbe);
 
-        const scheduleEmbed = new EmbedBuilder().setColor(0x9a6dbe);
+    // If a class name was provided, only show the schedule for that class.
+    if (className) {
+        // Generate embed for the schedule
+        scheduleEmbed.setTitle(`${className} - Week ${weekData["week"]}`);
 
-        // If a class name was provided, only show the schedule for that class.
-        if (className) {
-            // Generate embed for the schedule
-            scheduleEmbed.setTitle(`${className} - Week ${weekData["week"]}`);
+        const scheduleData = await fetchSchedule(className);
 
-            // Create a list of all of the schedule items
-            scheduleData.forEach(classElement => {
-                if (classElement.class === className) {
-                    let scheduleItems = '';
-                    classElement.items.forEach(item => {
-                        scheduleItems += (item + '\n');
-                    });
-                    scheduleEmbed.setDescription(scheduleItems);
-                }
-            });
+        if (scheduleData === undefined || scheduleData.length === 0) return scheduleEmbed.setDescription("No schedule data found for this week.");
 
-            return scheduleEmbed;
-        }
-
-        // Generate embed for the schedule with all classes
-        scheduleEmbed.setTitle(`Week ${weekData["week"]}`);
         const fields = [];
 
-        // Create a list of all of the schedule items for each class
-        scheduleData.forEach(classElement => {
-            let scheduleItems = "";
+        scheduleData.forEach(item => {
+            let date = "";
 
-            classElement.items.forEach(item => {
-                scheduleItems += (item + "\n");
+            if (item.properties['Due Date'].date.start !== null) {
+                date = dayjs(item.properties['Due Date'].date.start).format('MM/DD/YYYY hh:mm A');
+            }
+
+            if (item.properties['Due Date'].date.end !== null) {
+                date += ` to ${dayjs(item.properties['Due Date'].date.end).format('hh:mm A')}`;
+            }
+
+            let value = "";
+
+            if (date !== "") {
+                value += `\t*Due Date:* ${date}\n`;
+            }
+
+            if (item.properties['Notes'].rich_text !== null) {
+                if (item.properties['Notes'].rich_text.length > 0) {
+                    let notes = "";
+
+                    item.properties['Notes'].rich_text.forEach(note => {
+                        notes += `${note.plain_text}\n`;
+                    });
+
+                    value += `\`\`\`${notes}\`\`\``;
+                }
+            }
+
+            fields.push({
+                name: item.properties['Name'].title[0].plain_text,
+                value: value,
             });
-
-            if (classElement.class !== "") fields.push({ name: classElement.class, value: scheduleItems });
         });
 
         scheduleEmbed.addFields(fields);
@@ -83,61 +131,74 @@ module.exports.createEmbed = (className = undefined) => {
         return scheduleEmbed;
     }
 
-    return new EmbedBuilder().setTitle(`Week ${weekData["week"]}`).setColor(0x9a6dbe).setDescription("No schedule data found!");
-}
+    const scheduleData = await fetchSchedule();
+    if (scheduleData === undefined || scheduleData.length === 0) return scheduleEmbed.setDescription("No schedule data found for this week.");
 
-/**
- * Authorize with Google and fetch the current weeks schedule.
- */
-module.exports.authorizeAndFetch = async () => {
-    try {
-        const auth = new google.auth.GoogleAuth({
-            keyFile: CREDENTIALS_PATH,
-            scopes: SCOPES
-        });
+    // Generate embed for the schedule with all classes
+    scheduleEmbed.setTitle(`Week ${weekData["week"]}`);
+    const fields = [];
 
-        const client = await auth.getClient();
-        const googleSheets = google.sheets({ version: "v4", auth: client });
+    const classes = {
+        'Calculus': [],
+        'Chemistry': [],
+        'Design': [],
+        'Linear Algebra': [],
+        'Physics': [],
+        'Programming': [],
+        'Statics': [],
+        'Materials': [],
+        'Business': []
+    };
 
-        console.log(`⌛ Fetching schedule data from Google Sheets API`);
 
-        try {
-            // Fetch the table from the API given the corresponding Week sheet.
-            const getRows = await googleSheets.spreadsheets.values.get({
-                auth,
-                spreadsheetId: SPREADSHEET_ID,
-                range: `Week ${weekData["week"]}`
-            });
+    // Create a list of all of the schedule items for each class
+    scheduleData.forEach(item => {
+        let date = "";
 
-            // Reset the schedule data.
-            scheduleData = [];
+        if (item.properties['Due Date'].date !== null) {
+            date = dayjs(item.properties['Due Date'].date.start).format('MM/DD/YYYY hh:mm A');
 
-            if (getRows.status !== 200) throw new Error(`Error fetching data from Google Sheets API. Status code: ${getRows.status}`);
-
-            // Go through the headers and setup the initial objects in the schedule data array.
-            for (let col = 0; col < getRows.data.values[0].length; col++) {
-                scheduleData.push({
-                    class: getRows.data.values[0][col],
-                    items: []
-                });
+            if (item.properties['Due Date'].date.end !== null) {
+                date += ` to ${dayjs(item.properties['Due Date'].date.end).format('hh:mm A')}`;
             }
-
-            // Add the corresponding tasks/items to classes
-            for (let row = 1; row < getRows.data.values.length; row++) {
-                for (let col = 0; col < getRows.data.values[row].length; col++) {
-                    scheduleData[col].items.push(getRows.data.values[row][col])
-                }
-            }
-
-            console.log(`✅ Successfully fetched & updated the current schedule`);
-        } catch (err) {
-            console.error("❌ Unable to fetch the correct rows! Try changing the current week.");
         }
 
-        return scheduleData;
+        let value = "";
+
+        if (date !== "") {
+            value += `  *Due Date:* ${date}\n`;
+        }
+
+        if (item.properties['Notes'].rich_text !== null) {
+            if (item.properties['Notes'].rich_text.length > 0) {
+                let notes = "";
+
+                item.properties['Notes'].rich_text.forEach(note => {
+                    notes += `${note.plain_text}\n`;
+                });
+
+                value += `\`\`\`${notes}\`\`\``;
+            }
+        }
+
+        item.properties['Tags'].multi_select.forEach(tag => {
+            if (tag.name in classes) {
+                classes[tag.name].push(`‣ **${item.properties['Name'].title[0].plain_text}**\n${value}`);
+            }
+        });
+    });
+
+    for ([key, value] of Object.entries(classes)) {
+        if (value.length > 0) {
+            value.push('\n');
+            fields.push({
+                name: `***--- ${key} ---***`,
+                value: value.join(''),
+            });
+        }
     }
-    catch (err) {
-        console.log(err);
-        return [];
-    }
+
+    scheduleEmbed.addFields(fields);
+
+    return scheduleEmbed;
 }

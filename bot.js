@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const dayjs = require('dayjs');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
-const { authorizeAndFetch } = require('./helpers/weeklySchedule');
+
 const client = new Client(
     {
         intents: [
@@ -42,7 +42,6 @@ exitProcess = () => {
 }
 
 client.once('ready', async () => {
-    await authorizeAndFetch();
     console.log(`✅ Ready! - ${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
 });
 

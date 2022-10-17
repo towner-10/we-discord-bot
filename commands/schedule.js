@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getScheduleData, createEmbed } = require('../helpers/weeklySchedule.js');
+const { createEmbed } = require('../helpers/weeklySchedule.js');
 
 module.exports = {
         data: new SlashCommandBuilder()
@@ -23,39 +23,34 @@ module.exports = {
                 ),
         async execute(interaction) {
                 if (interaction.options.getString('class')) {
-
-                        const data = getScheduleData();
-
-                        if (data.length === 0) return await interaction.reply({ content: 'Couldn\'t send the requested weekly schedule! Try again later.', ephemeral: true });
-
                         // Depending on the class, create and send an embed for that classes schedule for the current week.
                         switch (interaction.options.getString('class')) {
                                 case 'bus':
-                                        await interaction.reply({ embeds: [createEmbed('Business')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Business')] });
                                         break;
                                 case 'phys':
-                                        await interaction.reply({ embeds: [createEmbed('Physics')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Physics')] });
                                         break;
                                 case 'calc':
-                                        await interaction.reply({ embeds: [createEmbed('Calculus')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Calculus')] });
                                         break;
                                 case 'statics':
-                                        await interaction.reply({ embeds: [createEmbed('Statics')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Statics')] });
                                         break;
                                 case 'design':
-                                        await interaction.reply({ embeds: [createEmbed('Design')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Design')] });
                                         break;
                                 case 'chem':
-                                        await interaction.reply({ embeds: [createEmbed('Chemistry')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Chemistry')] });
                                         break;
                                 case 'mats':
-                                        await interaction.reply({ embeds: [createEmbed('Materials')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Materials')] });
                                         break;
                                 case 'lin-alg':
-                                        await interaction.reply({ embeds: [createEmbed('Linear Algebra')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Linear Algebra')] });
                                         break;
                                 case 'prog':
-                                        await interaction.reply({ embeds: [createEmbed('Programming')] });
+                                        await interaction.reply({ embeds: [await createEmbed('Programming')] });
                                         break;
                                 default:
                                         await interaction.reply({ content: 'Couldn\'t send the requested weekly schedule! Try again later.', ephemeral: true });
