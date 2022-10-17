@@ -166,7 +166,7 @@ module.exports.createEmbed = async (className = undefined) => {
         let value = "";
 
         if (date !== "") {
-            value += `  *Due Date:* ${date}\n`;
+            value += `⤍ *Due Date:* ${date}\n`;
         }
 
         if (item.properties['Notes'].rich_text !== null) {
@@ -183,7 +183,7 @@ module.exports.createEmbed = async (className = undefined) => {
 
         item.properties['Tags'].multi_select.forEach(tag => {
             if (tag.name in classes) {
-                classes[tag.name].push(`‣ **${item.properties['Name'].title[0].plain_text}**\n${value}`);
+                classes[tag.name].push(`__${item.properties['Name'].title[0].plain_text}__\n${value}`);
             }
         });
     });
@@ -192,7 +192,7 @@ module.exports.createEmbed = async (className = undefined) => {
         if (value.length > 0) {
             value.push('\n');
             fields.push({
-                name: `***--- ${key} ---***`,
+                name: `***${key}***`,
                 value: value.join(''),
             });
         }
