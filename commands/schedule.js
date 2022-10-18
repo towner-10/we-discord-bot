@@ -22,39 +22,33 @@ module.exports = {
                         .setRequired(true)
                 ),
         async execute(interaction) {
-                if (interaction.options.getString('class')) {
-                        // Depending on the class, create and send an embed for that classes schedule for the current week.
-                        switch (interaction.options.getString('class')) {
-                                case 'bus':
-                                        await interaction.reply({ embeds: [await createEmbed('Business')] });
-                                        break;
-                                case 'phys':
-                                        await interaction.reply({ embeds: [await createEmbed('Physics')] });
-                                        break;
-                                case 'calc':
-                                        await interaction.reply({ embeds: [await createEmbed('Calculus')] });
-                                        break;
-                                case 'statics':
-                                        await interaction.reply({ embeds: [await createEmbed('Statics')] });
-                                        break;
-                                case 'design':
-                                        await interaction.reply({ embeds: [await createEmbed('Design')] });
-                                        break;
-                                case 'chem':
-                                        await interaction.reply({ embeds: [await createEmbed('Chemistry')] });
-                                        break;
-                                case 'mats':
-                                        await interaction.reply({ embeds: [await createEmbed('Materials')] });
-                                        break;
-                                case 'lin-alg':
-                                        await interaction.reply({ embeds: [await createEmbed('Linear Algebra')] });
-                                        break;
-                                case 'prog':
-                                        await interaction.reply({ embeds: [await createEmbed('Programming')] });
-                                        break;
-                                default:
-                                        await interaction.reply({ content: 'Couldn\'t send the requested weekly schedule! Try again later.', ephemeral: true });
-                        }
+                // If the user did not provide a class, return an the entire schedule
+                if (!interaction.options.getString('class')) {
+                        return await interaction.reply({ embeds: [await createEmbed()] });
+                }
+
+                // Depending on the class, create and send an embed for that classes schedule for the current week.
+                switch (interaction.options.getString('class')) {
+                        case 'bus':
+                                return await interaction.reply({ embeds: [await createEmbed('Business')] });
+                        case 'phys':
+                                return await interaction.reply({ embeds: [await createEmbed('Physics')] });
+                        case 'calc':
+                                return await interaction.reply({ embeds: [await createEmbed('Calculus')] });
+                        case 'statics':
+                                return await interaction.reply({ embeds: [await createEmbed('Statics')] });
+                        case 'design':
+                                return await interaction.reply({ embeds: [await createEmbed('Design')] });
+                        case 'chem':
+                                return await interaction.reply({ embeds: [await createEmbed('Chemistry')] });
+                        case 'mats':
+                                return await interaction.reply({ embeds: [await createEmbed('Materials')] });
+                        case 'lin-alg':
+                                return await interaction.reply({ embeds: [await createEmbed('Linear Algebra')] });
+                        case 'prog':
+                                return await interaction.reply({ embeds: [await createEmbed('Programming')] });
+                        default:
+                                return await interaction.reply({ content: 'Couldn\'t send the requested weekly schedule! Try again later.', ephemeral: true });
                 }
         },
 };

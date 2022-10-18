@@ -1,5 +1,5 @@
-const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { setWeek } = require('../helpers/weeklySchedule.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { setWeek, createEmbed } = require('../helpers/weeklySchedule.js');
 
 module.exports = {
         data: new SlashCommandBuilder()
@@ -22,6 +22,22 @@ module.exports = {
                         );
 
                         await interaction.reply({ content: `Updated the current week to ${interaction.options.getInteger('week')}!`, ephemeral: true, components: [row] });
+
+                        const collector = interaction.channel.createMessageComponentCollector({ componentType: ComponentType.Button, time: 15000 });
+
+                        collector.on('collect', async i => {
+                                if (i.user.id === interaction.user.id) {
+                                        switch (i.customId) {
+                                                case 'post-weekly':
+                                                        await i.update({ content: 'Posting the schedule...', components: [] });
+                                                        return await interaction.channel.send({ embeds: [await createEmbed()] });
+                                                case 'test-weekly':
+                                                        return await i.update({ content: "This is what the schedule will look like...", embeds: [await createEmbed()], ephemeral: true });
+                                                default:
+                                                        break;
+                                        }
+                                }
+                        });
                 } else {
                         await interaction.reply({ content: 'Could not update the current week! Try again later.', ephemeral: true });
                 }

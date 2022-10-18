@@ -78,12 +78,14 @@ module.exports.setWeek = async (week) => {
 module.exports.createEmbed = async (className = undefined) => {
     const { EmbedBuilder } = require('discord.js');
 
-    const scheduleEmbed = new EmbedBuilder().setColor(0x9a6dbe);
+    const scheduleEmbed = new EmbedBuilder().setColor(0x9a6dbe).setFooter({
+        text: `Created by WE Discord Bot`
+    }).setTimestamp();
 
     // If a class name was provided, only show the schedule for that class.
     if (className) {
         // Generate embed for the schedule
-        scheduleEmbed.setTitle(`${className} - Week ${weekData["week"]}`);
+        scheduleEmbed.setTitle(`${className} - Week ${weekData["week"]}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
 
         const scheduleData = await fetchSchedule(className);
 
@@ -105,7 +107,9 @@ module.exports.createEmbed = async (className = undefined) => {
             let value = "";
 
             if (date !== "") {
-                value += `\t*Due Date:* ${date}\n`;
+                value += `⤍ *Due Date:* ${date}\n`;
+            } else {
+                value += `⤍ *Due Date:* N/A\n`;
             }
 
             if (item.properties['Notes'].rich_text !== null) {
@@ -128,6 +132,8 @@ module.exports.createEmbed = async (className = undefined) => {
 
         scheduleEmbed.addFields(fields);
 
+        console.log(`✅ Created schedule for ${weekData["week"]} for ${className} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
+
         return scheduleEmbed;
     }
 
@@ -135,7 +141,7 @@ module.exports.createEmbed = async (className = undefined) => {
     if (scheduleData === undefined || scheduleData.length === 0) return scheduleEmbed.setDescription("No schedule data found for this week.");
 
     // Generate embed for the schedule with all classes
-    scheduleEmbed.setTitle(`Week ${weekData["week"]}`);
+    scheduleEmbed.setTitle(`Week ${weekData["week"]}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
     const fields = [];
 
     const classes = {
@@ -167,6 +173,8 @@ module.exports.createEmbed = async (className = undefined) => {
 
         if (date !== "") {
             value += `⤍ *Due Date:* ${date}\n`;
+        } else {
+            value += `⤍ *Due Date:* N/A\n`;
         }
 
         if (item.properties['Notes'].rich_text !== null) {
@@ -199,6 +207,8 @@ module.exports.createEmbed = async (className = undefined) => {
     }
 
     scheduleEmbed.addFields(fields);
+
+    console.log(`✅ Created schedule for ${weekData["week"]} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
 
     return scheduleEmbed;
 }
