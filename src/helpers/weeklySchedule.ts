@@ -4,7 +4,8 @@ import { EmbedField } from "src/types/embedField";
 import { EmbedBuilder } from "discord.js";
 
 import fs from 'fs';
-import { Client } from "@notionhq/client";
+import { Client, isFullPage } from "@notionhq/client";
+import { DatePropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import dayjs from 'dayjs';
 
 import currentWeek from "../currentWeek.json";
@@ -16,7 +17,7 @@ const notion = new Client({
 });
 
 async function fetchSchedule(className?: string) {
-    if (!process.env.NOTION_DATABASE_ID) return;
+    if (!process.env.NOTION_DATABASE_ID) throw new Error("No database ID provided");
 
     if (className) {
         const scheduleData = await notion.databases.query({
@@ -86,53 +87,69 @@ export async function createEmbed(className?: string) {
         text: `Created by WE Discord Bot`
     }).setTimestamp();
 
+    // TODO: Create function to combine repeat code
+
     // If a class name was provided, only show the schedule for that class.
     if (className) {
+
         // Generate embed for the schedule
         scheduleEmbed.setTitle(`${className} - Week ${weekData["week"]}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
 
+        // Get the schedule for the class
         const scheduleData = await fetchSchedule(className);
 
-        if (scheduleData === undefined || scheduleData.length === 0) return scheduleEmbed.setDescription("No schedule data found for this week.");
+        // If there is no schedule for the class, return an error message.
+        if (scheduleData === undefined || scheduleData.length === 0) return scheduleEmbed.setDescription("No schedule data found for this week. Check the week number and try again.");
 
         const fields: EmbedField[] = [];
 
-        scheduleData.forEach((item: any) => {
-            let date = "";
-
-            if (item.properties['Due Date'].date.start !== null) {
-                date = dayjs(item.properties['Due Date'].date.start).format('MM/DD/YYYY hh:mm A');
+        // Loop through the schedule data and add it to the embed.
+        for (const page of scheduleData) {
+            if (!isFullPage(page)) {
+                console.error(`❌ Error: Page data is not full`);
+                continue;
             }
 
-            if (item.properties['Due Date'].date.end !== null) {
-                date += ` to ${dayjs(item.properties['Due Date'].date.end).format('hh:mm A')}`;
+            let dateText = "";
+
+            // Get corresponding values from the page
+            const name = (page.properties['Name'] as { type: "title"; title: Array<RichTextItemResponse>; id: string }).title[0].plain_text;
+            const date = (page.properties['Due Date'] as DatePropertyItemObjectResponse).date;
+            const notes = (page.properties['Notes'] as { type: "rich_text"; rich_text: Array<RichTextItemResponse>; id: string }).rich_text;
+
+            if (date?.start !== null) {
+                dateText = dayjs(date?.start).format('DD/MM/YYYY h:mm A');
             }
 
-            let value = "";
+            if (date?.end !== null) {
+                dateText += ` to ${dayjs(date?.end).format('h:mm A')}`;
+            }
 
-            if (date !== "") {
-                value += `⤍ *Due Date:* ${date}\n`;
+            let text = "";
+
+            if (dateText !== "") {
+                text += `⤍ *Due Date:* ${dateText}\n`;
             } else {
-                value += `⤍ *Due Date:* N/A\n`;
+                text += `⤍ *Due Date:* N/A\n`;
             }
 
-            if (item.properties['Notes'].rich_text !== null) {
-                if (item.properties['Notes'].rich_text.length > 0) {
-                    let notes = "";
+            if (notes !== null) {
+                if (notes.length > 0) {
+                    let noteText = "";
 
-                    item.properties['Notes'].rich_text.forEach((note: any) => {
-                        notes += `${note.plain_text}\n`;
+                    notes.forEach((note: RichTextItemResponse) => {
+                        noteText += `${note.plain_text}\n`;
                     });
 
-                    value += `\`\`\`${notes}\`\`\``;
+                    text += `\`\`\`${noteText}\`\`\``;
                 }
             }
 
             fields.push({
-                name: item.properties['Name'].title[0].plain_text,
-                value: value,
+                name: name,
+                value: text,
             });
-        });
+        }
 
         scheduleEmbed.addFields(fields);
 
@@ -160,45 +177,54 @@ export async function createEmbed(className?: string) {
         'Business': []
     };
 
-
     // Create a list of all of the schedule items for each class
-    scheduleData.forEach((item: any) => {
-        let date = "";
-
-        if (item.properties['Due Date'].date !== null) {
-            date = dayjs(item.properties['Due Date'].date.start).format('MM/DD/YYYY hh:mm A');
-
-            if (item.properties['Due Date'].date.end !== null) {
-                date += ` to ${dayjs(item.properties['Due Date'].date.end).format('hh:mm A')}`;
-            }
+    for (const page of scheduleData) {
+        if (!isFullPage(page)) {
+            console.error(`❌ Error: Page data is not full`);
+            continue;
         }
 
-        let value = "";
+        let text = "";
 
-        if (date !== "") {
-            value += `⤍ *Due Date:* ${date}\n`;
+        const name = (page.properties['Name'] as { type: "title"; title: Array<RichTextItemResponse>; id: string }).title[0].plain_text;
+        const date = (page.properties['Due Date'] as DatePropertyItemObjectResponse).date;
+        const notes = (page.properties['Notes'] as { type: "rich_text"; rich_text: Array<RichTextItemResponse>; id: string }).rich_text;
+        const tags = (page.properties['Tags'] as MultiSelectPropertyItemObjectResponse).multi_select;
+
+        let dateText = "";
+
+        if (date?.start !== null) {
+            dateText = dayjs(date?.start).format('DD/MM/YYYY h:mm A');
+        }
+
+        if (date?.end !== null) {
+            dateText += ` to ${dayjs(date?.end).format('h:mm A')}`;
+        }
+
+        if (dateText !== "") {
+            text += `⤍ *Due Date:* ${dateText}\n`;
         } else {
-            value += `⤍ *Due Date:* N/A\n`;
+            text += `⤍ *Due Date:* N/A\n`;
         }
 
-        if (item.properties['Notes'].rich_text !== null) {
-            if (item.properties['Notes'].rich_text.length > 0) {
-                let notes = "";
+        if (notes !== null) {
+            if (notes.length > 0) {
+                let noteText = "";
 
-                item.properties['Notes'].rich_text.forEach((note: any) => {
-                    notes += `${note.plain_text}\n`;
+                notes.forEach((note: RichTextItemResponse) => {
+                    noteText += `${note.plain_text}\n`;
                 });
 
-                value += `\`\`\`${notes}\`\`\``;
+                text += `\`\`\`${noteText}\`\`\``;
             }
         }
 
-        item.properties['Tags'].multi_select.forEach((tag: any) => {
+        tags.forEach((tag) => {
             if (tag.name in classes) {
-                classes[tag.name].push(`__${item.properties['Name'].title[0].plain_text}__\n${value}`);
+                classes[tag.name].push(`__${name}__\n${text}`);
             }
         });
-    });
+    }
 
     for (const className in classes) {
         if (classes[className].length > 0) {
