@@ -1,6 +1,6 @@
-import { CommandInteraction, GuildMemberRoleManager, SlashCommandIntegerOption } from "discord.js";
+import { ActivityType, CommandInteraction, GuildMemberRoleManager, SlashCommandIntegerOption } from "discord.js";
 import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, ButtonInteraction, CacheType } from 'discord.js';
-import { setWeek, createEmbed } from '../helpers/weeklySchedule';
+import { setWeek, createEmbed, weekData } from '../helpers/weeklySchedule';
 
 module.exports = {
         data: new SlashCommandBuilder()
@@ -24,6 +24,8 @@ module.exports = {
                         );
 
                         await interaction.reply({ content: `Updated the current week to ${interaction.options.get('week')?.value}!`, ephemeral: true, components: [row], fetchReply: true });
+
+                        interaction.client.user?.setActivity(`Week ${weekData.week}`, { type: ActivityType.Watching });
 
                         const collector = interaction.channel?.createMessageComponentCollector({ componentType: ComponentType.Button, time: 15000 });
 

@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import currentWeek from "../currentWeek.json";
 import { NameNotion, NotesNotion } from "src/types/notion";
 
-let weekData = currentWeek;
+export let weekData = currentWeek;
 
 const notion = new Client({
     auth: process.env.NOTION_TOKEN,
@@ -34,7 +34,7 @@ async function fetchSchedule(className?: string) {
                     {
                         property: 'Tags',
                         multi_select: {
-                            contains: `Week ${weekData["week"]}`,
+                            contains: `Week ${weekData.week}`,
                         }
                     },
                 ],
@@ -49,7 +49,7 @@ async function fetchSchedule(className?: string) {
         filter: {
             property: 'Tags',
             multi_select: {
-                contains: `Week ${weekData["week"]}`,
+                contains: `Week ${weekData.week}`,
             }
         }
     });
@@ -133,7 +133,7 @@ export async function createEmbed(className?: string) {
     if (className) {
 
         // Generate embed for the schedule
-        scheduleEmbed.setTitle(`${className} - Week ${weekData["week"]}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
+        scheduleEmbed.setTitle(`${className} - Week ${weekData.week}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
 
         // Get the schedule for the class
         const scheduleData = await fetchSchedule(className);
@@ -169,7 +169,7 @@ export async function createEmbed(className?: string) {
     if (scheduleData === undefined || scheduleData.length === 0) return scheduleEmbed.setDescription("No schedule data found for this week.");
 
     // Generate embed for the schedule with all classes
-    scheduleEmbed.setTitle(`Week ${weekData["week"]}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
+    scheduleEmbed.setTitle(`Week ${weekData.week}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
     const fields: EmbedField[] = [];
 
     const classes: ClassMap = {
@@ -214,7 +214,7 @@ export async function createEmbed(className?: string) {
 
     scheduleEmbed.addFields(fields);
 
-    console.log(`✅ Created schedule for Week ${weekData["week"]} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
+    console.log(`✅ Created schedule for Week ${weekData.week} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
 
     return scheduleEmbed;
 }
