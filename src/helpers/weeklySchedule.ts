@@ -214,7 +214,7 @@ export async function createEmbed(className?: string) {
 
     scheduleEmbed.addFields(fields);
 
-    console.log(`✅ Created schedule for ${weekData["week"]} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
+    console.log(`✅ Created schedule for Week ${weekData["week"]} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
 
     return scheduleEmbed;
 }
