@@ -5,10 +5,11 @@ import { EmbedBuilder } from "discord.js";
 
 import fs from 'fs';
 import { Client, isFullPage } from "@notionhq/client";
-import { DatePropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+import { DatePropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, PageObjectResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import dayjs from 'dayjs';
 
 import currentWeek from "../currentWeek.json";
+import { NameNotion, NotesNotion } from "src/types/notion";
 
 let weekData = currentWeek;
 
@@ -75,8 +76,6 @@ export async function setWeek(week: number) {
     return true;
 }
 
-
-
 /**
  * Creates an embed with the current weeks schedule.
  * @param {*} className The name of the class to get the schedule for.
@@ -87,7 +86,48 @@ export async function createEmbed(className?: string) {
         text: `Created by WE Discord Bot`
     }).setTimestamp();
 
-    // TODO: Create function to combine repeat code
+    // Get the schedule data from Notion
+    const processPage = (page: PageObjectResponse) => {
+        let dateText = "";
+
+        // Get corresponding values from the page
+        const name = (page.properties['Name'] as NameNotion).title[0].plain_text;
+        const date = (page.properties['Due Date'] as DatePropertyItemObjectResponse).date;
+        const notes = (page.properties['Notes'] as NotesNotion).rich_text;
+
+        if (date?.start !== null) {
+            dateText = dayjs(date?.start).format('DD/MM/YYYY h:mm A');
+        }
+
+        if (date?.end !== null) {
+            dateText += ` to ${dayjs(date?.end).format('h:mm A')}`;
+        }
+
+        let text = "";
+
+        if (dateText !== "") {
+            text += `⤍ *Due Date:* ${dateText}\n`;
+        } else {
+            text += `⤍ *Due Date:* N/A\n`;
+        }
+
+        if (notes !== null) {
+            if (notes.length > 0) {
+                let noteText = "";
+
+                notes.forEach((note: RichTextItemResponse) => {
+                    noteText += `${note.plain_text}\n`;
+                });
+
+                text += `\`\`\`${noteText}\`\`\``;
+            }
+        }
+
+        return {
+            name: name,
+            text: text
+        };
+    };
 
     // If a class name was provided, only show the schedule for that class.
     if (className) {
@@ -104,52 +144,19 @@ export async function createEmbed(className?: string) {
         const fields: EmbedField[] = [];
 
         // Loop through the schedule data and add it to the embed.
-        for (const page of scheduleData) {
-            if (!isFullPage(page)) {
+        scheduleData.forEach((value) => {
+            if (!isFullPage(value)) {
                 console.error(`❌ Error: Page data is not full`);
-                continue;
+                return;
             }
 
-            let dateText = "";
-
-            // Get corresponding values from the page
-            const name = (page.properties['Name'] as { type: "title"; title: Array<RichTextItemResponse>; id: string }).title[0].plain_text;
-            const date = (page.properties['Due Date'] as DatePropertyItemObjectResponse).date;
-            const notes = (page.properties['Notes'] as { type: "rich_text"; rich_text: Array<RichTextItemResponse>; id: string }).rich_text;
-
-            if (date?.start !== null) {
-                dateText = dayjs(date?.start).format('DD/MM/YYYY h:mm A');
-            }
-
-            if (date?.end !== null) {
-                dateText += ` to ${dayjs(date?.end).format('h:mm A')}`;
-            }
-
-            let text = "";
-
-            if (dateText !== "") {
-                text += `⤍ *Due Date:* ${dateText}\n`;
-            } else {
-                text += `⤍ *Due Date:* N/A\n`;
-            }
-
-            if (notes !== null) {
-                if (notes.length > 0) {
-                    let noteText = "";
-
-                    notes.forEach((note: RichTextItemResponse) => {
-                        noteText += `${note.plain_text}\n`;
-                    });
-
-                    text += `\`\`\`${noteText}\`\`\``;
-                }
-            }
+            const { name, text } = processPage(value);
 
             fields.push({
                 name: name,
-                value: text,
+                value: text
             });
-        }
+        });
 
         scheduleEmbed.addFields(fields);
 
@@ -178,53 +185,22 @@ export async function createEmbed(className?: string) {
     };
 
     // Create a list of all of the schedule items for each class
-    for (const page of scheduleData) {
-        if (!isFullPage(page)) {
+    scheduleData.forEach((value) => {
+        if (!isFullPage(value)) {
             console.error(`❌ Error: Page data is not full`);
-            continue;
+            return;
         }
 
-        let text = "";
+        const tags = (value.properties['Tags'] as MultiSelectPropertyItemObjectResponse).multi_select;
 
-        const name = (page.properties['Name'] as { type: "title"; title: Array<RichTextItemResponse>; id: string }).title[0].plain_text;
-        const date = (page.properties['Due Date'] as DatePropertyItemObjectResponse).date;
-        const notes = (page.properties['Notes'] as { type: "rich_text"; rich_text: Array<RichTextItemResponse>; id: string }).rich_text;
-        const tags = (page.properties['Tags'] as MultiSelectPropertyItemObjectResponse).multi_select;
-
-        let dateText = "";
-
-        if (date?.start !== null) {
-            dateText = dayjs(date?.start).format('DD/MM/YYYY h:mm A');
-        }
-
-        if (date?.end !== null) {
-            dateText += ` to ${dayjs(date?.end).format('h:mm A')}`;
-        }
-
-        if (dateText !== "") {
-            text += `⤍ *Due Date:* ${dateText}\n`;
-        } else {
-            text += `⤍ *Due Date:* N/A\n`;
-        }
-
-        if (notes !== null) {
-            if (notes.length > 0) {
-                let noteText = "";
-
-                notes.forEach((note: RichTextItemResponse) => {
-                    noteText += `${note.plain_text}\n`;
-                });
-
-                text += `\`\`\`${noteText}\`\`\``;
-            }
-        }
+        const { name, text } = processPage(value);
 
         tags.forEach((tag) => {
             if (tag.name in classes) {
                 classes[tag.name].push(`__${name}__\n${text}`);
             }
         });
-    }
+    });
 
     for (const className in classes) {
         if (classes[className].length > 0) {
