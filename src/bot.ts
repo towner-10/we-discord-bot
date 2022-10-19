@@ -1,8 +1,11 @@
-require('dotenv').config()
-const fs = require('node:fs');
-const path = require('node:path');
-const dayjs = require('dayjs');
-const { Client, Collection, GatewayIntentBits } = require('discord.js');
+import dotenv from 'dotenv';
+dotenv.config();
+
+import fs from 'node:fs';
+import path from 'node:path';
+import dayjs from 'dayjs';
+import { Client, Collection, GatewayIntentBits, Interaction } from 'discord.js';
+import { Command } from './types/command';
 
 const client = new Client(
     {
@@ -15,17 +18,18 @@ const client = new Client(
         ]
     });
 
-client.commands = new Collection();
+const commands = new Collection<string, Command>();
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync(commandsPath).filter((file: string) => file.endsWith('.ts'));
 
-for (const file of commandFiles) {
+for (const file of commandFiles){
     const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    client.commands.set(command.data.name, command);
+    import(filePath).then((command: Command) => {
+        commands.set(command.data.name, command);
+    });
 }
 
-exitProcess = () => {
+const exitProcess = () => {
     console.log('\n⏳ Stopping bot...');
     client.destroy();
     console.log(`✅ Bot stopped. Goodbye! - ${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
@@ -37,13 +41,13 @@ client.once('ready', async () => {
 
 process.on('SIGINT', () => exitProcess());
 
-client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', async (interaction: Interaction) => {
     if (!interaction.isCommand()) return;
 
-    const command = client.commands.get(interaction.commandName);
+    const command = commands.get(interaction.commandName);
 
     try {
-        await command.execute(interaction);
+        await command?.execute(interaction);
     } catch (error) {
         console.error(error);
         await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });

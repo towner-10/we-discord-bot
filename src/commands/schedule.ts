@@ -1,11 +1,11 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { createEmbed } = require('../helpers/weeklySchedule.js');
+import { CommandInteraction, SlashCommandBuilder, SlashCommandStringOption } from "discord.js";
+import { createEmbed } from '../helpers/weeklySchedule';
 
 module.exports = {
         data: new SlashCommandBuilder()
                 .setName('schedule')
                 .setDescription('Get the schedule for the class you choose')
-                .addStringOption(option => option
+                .addStringOption((option: SlashCommandStringOption) => option
                         .setName('class')
                         .setDescription('The week number into the current school year')
                         .addChoices(
@@ -21,14 +21,14 @@ module.exports = {
                         )
                         .setRequired(true)
                 ),
-        async execute(interaction) {
+        async execute(interaction: CommandInteraction) {
                 // If the user did not provide a class, return an the entire schedule
-                if (!interaction.options.getString('class')) {
+                if (!interaction.options.get('class')) {
                         return await interaction.reply({ embeds: [await createEmbed()] });
                 }
 
                 // Depending on the class, create and send an embed for that classes schedule for the current week.
-                switch (interaction.options.getString('class')) {
+                switch (interaction.options.get('class')?.value as string) {
                         case 'bus':
                                 return await interaction.reply({ embeds: [await createEmbed('Business')] });
                         case 'phys':
