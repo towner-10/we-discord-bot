@@ -11,6 +11,7 @@ export default class Database {
     }
 
     public async createAnnouncement(title: string, description: string, content: string, user: string, image?: string): Promise<Announcement | null> {
+        console.log(`📝 Creating announcement with title: ${title}`);
         try {
             if (image) {
                 const announcement = await this.client.announcement.create({
