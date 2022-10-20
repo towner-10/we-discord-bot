@@ -10,7 +10,7 @@ export default class Database {
         this.client = new PrismaClient();
     }
 
-    public async createAnnouncement(title: string, description: string, content: string, user: string, image?: string): Promise<Announcement | null> {
+    public async createAnnouncement(title: string, description: string, content: string, user: string, guild: string, message: string, image?: string): Promise<Announcement | null> {
         console.log(`📝 Creating announcement with title: ${title}`);
         try {
             if (image) {
@@ -20,7 +20,9 @@ export default class Database {
                         description: description,
                         content: content,
                         image: image,
-                        user: user
+                        user: user,
+                        guild: guild,
+                        message: message
                     }
                 });
 
@@ -34,7 +36,9 @@ export default class Database {
                     description: description,
                     content: content,
                     image: "",
-                    user: user
+                    user: user,
+                    message: message,
+                    guild: guild
                 }
             });
 
@@ -66,6 +70,25 @@ export default class Database {
         }
 
         return null;
+    }
+
+    public async getAnnouncementsByUser(user: string): Promise<Announcement[]> {
+        try {
+            const announcements = await this.client.announcement.findMany({
+                where: {
+                    user: user
+                }
+            });
+
+            console.log(`✅ Announcements found: ${announcements.length}`);
+
+            return announcements;
+        }
+        catch (error) {
+            console.error(error);
+        }
+
+        return [];
     }
 
     public async getAnnouncements(): Promise<Announcement[] | null> {

@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import { CommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import Database from "../helpers/database";
 

@@ -17,5 +17,7 @@ model Announcement {
   content String
   image String
   user String
+  guild String
+  message String
   createdAt DateTime @default(now())
 }
