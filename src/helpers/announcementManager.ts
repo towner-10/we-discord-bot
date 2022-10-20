@@ -1,5 +1,5 @@
 import { Announcement } from "@prisma/client";
-import { ActionRowBuilder, Attachment, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, ChannelType, Client, ComponentType, EmbedBuilder, Guild, InteractionCollector, Message, TextChannel, User } from "discord.js";
+import { ActionRowBuilder, Attachment, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, ChannelType, Client, ComponentType, EmbedBuilder, Guild, InteractionCollector, Message, OverwriteResolvable, OverwriteType, PermissionFlagsBits, TextChannel, User } from "discord.js";
 import Database from "./database";
 
 export default class AnnouncementManager {
@@ -19,54 +19,130 @@ export default class AnnouncementManager {
 
         if (!announcements) return;
 
-        announcements.forEach((announcement) => {
-            client.guilds.fetch(announcement.guild).then(async (guild) => {
-                // If the collector for the guild already exists, return
-                if (this.collectors.has(announcement.guild)) return;
+        // Read all announcements from the database in sequence to prevent multiple channels being created at once
+        for (const announcement of announcements) {
+            const guild = await client.guilds.fetch(announcement.guild);
 
-                // Get the announcement ticket channel
-                const ticketsChannel = await this.getAnnouncementTicketsChannel(guild);
-                
-                // Create the collector for the channel
-                const collector = ticketsChannel.createMessageComponentCollector({ componentType: ComponentType.Button });
-                this.collectors.set(announcement.guild, collector);
+            // If the collector for the guild already exists, return
+            if (this.collectors.has(announcement.guild)) return;
 
-                // Set up the collector
-                await this.setupCollector(this.collectors.get(announcement.guild), guild);
-            });
-        });
+            // Get the announcement ticket channel
+            const ticketsChannel = await this.getAnnouncementTicketsChannel(guild);
+
+            // Create the collector for the channel
+            const collector = ticketsChannel.createMessageComponentCollector({ componentType: ComponentType.Button });
+            this.collectors.set(announcement.guild, collector);
+
+            // Set up the collector
+            await this.setupCollector(this.collectors.get(announcement.guild), guild);
+        }
     }
 
+    /**
+     * Fetches the announcement ticket channel for the guild.
+     * @param guild The guild to get the announcement ticket channel for
+     * @returns The announcement ticket channel
+     */
     private async getAnnouncementTicketsChannel(guild: Guild): Promise<TextChannel> {
-        // Get the announcement ticket channel
-        let ticketsChannel = guild.channels.cache.find(channel => channel.name === 'announcement-tickets') as TextChannel;
+        // Get the announcement channel from the database
+        const channels = await this.database.getAnnouncementTicketChannel(guild.id);
 
-        // If the channel doesn't exist, create it
-        if (!ticketsChannel) {
-            ticketsChannel = await guild.channels.create({
+        let channel: TextChannel | null = null;
+
+        if (channels && channels.announcementTicketChannel !== "") {
+            try {
+                channel = await guild.channels.fetch(channels.announcementTicketChannel) as TextChannel;
+            } catch (error) {
+                channel = null;
+            }
+        }
+
+        // If channel not in database
+        if (!channel) {
+            const adminRole = guild.client.guilds.cache.get(guild.id)?.roles.cache.find(role => role.name === process.env.ADMIN_ROLE);
+            const everyoneRole = guild.client.guilds.cache.get(guild.id)?.roles.everyone;
+
+            let permissions: OverwriteResolvable[] = [];
+
+            if (!everyoneRole) throw new Error('Everyone role not found.');
+
+            // If admin role exists, set permissions for it, otherwise just set permissions for everyone
+            if (!adminRole) permissions = [{ type: OverwriteType.Role, id: everyoneRole, deny: [PermissionFlagsBits.ViewChannel] }];
+            else {
+                permissions = [
+                    { type: OverwriteType.Role, id: everyoneRole, deny: [PermissionFlagsBits.ViewChannel] },
+                    { type: OverwriteType.Role, id: adminRole.id, allow: [PermissionFlagsBits.ViewChannel] }
+                ];
+            }
+
+            channel = await guild.channels.create({
                 name: 'announcement-tickets',
                 type: ChannelType.GuildText,
                 topic: 'Announcement tickets are created here.',
-                reason: 'Announcement tickets channel does not exist.'
+                reason: 'Announcement tickets channel does not exist.',
+                permissionOverwrites: permissions
             });
+
+            await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
+        }
+        // If channel is not in database but in cache 
+        else if (!channels && channel) {
+            await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
         }
 
-        return ticketsChannel;
+        if (!channel) throw new Error('Channel not found.');
+
+        return channel;
     }
 
+    /**
+     * Fetches the announcement channel for the guild.
+     * @param guild The guild to get the announcement channel for
+     * @returns The announcement channel
+     */
     private async getAnnouncementChannel(guild: Guild): Promise<TextChannel> {
-        // Get the announcement channel
-        let announcementChannel = guild.channels.cache.find(channel => channel.name === 'announcements') as TextChannel;
+        // Get the announcement channel from the database
+        const channels = await this.database.getAnnouncementChannel(guild.id);
 
-        // If the channel doesn't exist, create it
-        if (!announcementChannel) {
-            announcementChannel = await guild.channels.create({
+        let channel: TextChannel | null = null;
+
+        if (channels && channels.announcementChannel !== "") {
+            try {
+                channel = await guild.channels.fetch(channels.announcementChannel) as TextChannel;
+            } catch (error) {
+                channel = null;
+            }
+        }
+
+        // If channel not in database
+        if (!channel) {
+            channel = await guild.channels.create({
                 name: 'announcements',
                 type: ChannelType.GuildText
             });
+
+            await this.database.setAnnouncementChannel(channel.id, guild.id);
+        }
+        // If channel is not in database but in cache 
+        else if (!channels && channel) {
+            await this.database.setAnnouncementChannel(channel.id, guild.id);
         }
 
-        return announcementChannel;
+        if (!channel) throw new Error('Channel not found.');
+
+        return channel;
+    }
+
+    public async setAnnouncementChannel(guild: Guild, channel: TextChannel): Promise<void> {
+        await this.database.setAnnouncementChannel(channel.id, guild.id);
+
+        console.log(`✅ Announcement channel set to ${channel.name} (${channel.id})`);
+    }
+
+    public async setAnnouncementTicketsChannel(guild: Guild, channel: TextChannel): Promise<void> {
+        await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
+
+        console.log(`✅ Announcement tickets channel set to ${channel.name} (${channel.id})`);
     }
 
     private async setupCollector(collector: InteractionCollector<ButtonInteraction<CacheType>> | undefined, guild: Guild): Promise<void> {
@@ -74,7 +150,32 @@ export default class AnnouncementManager {
 
         // Set up the collector
         collector.on('collect', async (interaction) => {
-            if (interaction.customId.startsWith('send-announcement-')) {
+            if (interaction.customId.startsWith('send-announcement-everyone-')) {
+                const id = interaction.customId.split('-')[3];
+
+                const announcement = await this.database.getAnnouncement(parseInt(id));
+
+                if (!announcement) {
+                    await interaction.update({ content: 'An error occurred while posting the announcement.' });
+                    return;
+                }
+
+                try {
+                    // Get the announcement channel
+                    const announcementChannel = await this.getAnnouncementChannel(guild);
+
+                    // Send the announcement
+                    await announcementChannel.send({
+                        content: `@everyone\n\n__**${announcement.title}**__\n${announcement.description}\n\n>>> ${announcement.content}\n\n- ${(await guild.client.users.fetch(announcement.user)).toString()}`,
+                        files: announcement.image ? [announcement.image] : []
+                    });
+
+                    await interaction.update({ content: `This announcement has been posted.`, components: [] });
+                } catch (error) {
+                    console.log(error);
+                    await interaction.update({ content: 'An error occurred while posting the announcement.' });
+                }
+            } else if (interaction.customId.startsWith('send-announcement-')) {
                 const id = interaction.customId.split('-')[2];
 
                 const announcement = await this.database.getAnnouncement(parseInt(id));
@@ -84,16 +185,21 @@ export default class AnnouncementManager {
                     return;
                 }
 
-                // Get the announcement channel
-                const announcementChannel = await this.getAnnouncementChannel(guild);
+                try {
+                    // Get the announcement channel
+                    const announcementChannel = await this.getAnnouncementChannel(guild);
 
-                // Send the announcement
-                await announcementChannel.send({
-                    content: `@everyone\n\n__**${announcement.title}**__\n${announcement.description}\n\n>>> ${announcement.content}\n\n- ${(await guild.client.users.fetch(announcement.user)).toString()}`,
-                    files: announcement.image ? [announcement.image] : []
-                });
-            
-                await interaction.update({ content: `This has been posted.`, components: [] });
+                    // Send the announcement
+                    await announcementChannel.send({
+                        content: `__**${announcement.title}**__\n${announcement.description}\n\n>>> ${announcement.content}\n\n- ${(await guild.client.users.fetch(announcement.user)).toString()}`,
+                        files: announcement.image ? [announcement.image] : []
+                    });
+
+                    await interaction.update({ content: `This announcement has been posted.`, components: [] });
+                } catch (error) {
+                    console.log(error);
+                    await interaction.update({ content: 'An error occurred while posting the announcement.' });
+                }
             } else if (interaction.customId.startsWith('delete-announcement-')) {
                 const id = interaction.customId.split('-')[2];
                 await interaction.update({ content: 'Deleting the announcement...' });
@@ -114,17 +220,24 @@ export default class AnnouncementManager {
             // Set up the collector
             await this.setupCollector(this.collectors.get(guild.id), guild);
         }
-        
+
         const message = await ticketsChannel.send({ content: 'Creating announcement ticket...' }) as Message;
 
         const announcement = await Database.getInstance().createAnnouncement(title, description, content, user.id, guild.id, message.id, image?.url);
 
         if (!announcement) return null;
 
+        this.postAnnouncementTicket(announcement, message, guild, image);
+
+        return announcement;
+    }
+
+    private async postAnnouncementTicket(announcement: Announcement, message: Message, guild: Guild, image?: Attachment): Promise<void> {
         // Send the announcement ticket
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder().setCustomId(`send-announcement-${announcement.id}`).setLabel('Approve').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId(`delete-announcement-${announcement.id}`).setLabel('Remove').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(`send-announcement-everyone-${announcement.id}`).setLabel('Approve (Everyone)').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`send-announcement-${announcement.id}`).setLabel('Approve').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(`delete-announcement-${announcement.id}`).setLabel('Remove').setStyle(ButtonStyle.Danger),
         );
 
         const embed = new EmbedBuilder()
@@ -136,8 +249,6 @@ export default class AnnouncementManager {
             .setFooter({ text: `Announcement ID: ${announcement.id}` });
 
         await message.edit({ content: '', embeds: [embed], components: [row] });
-
-        return announcement;
     }
 
     public async deleteAnnouncement(id: number, guild: Guild): Promise<Announcement | null> {

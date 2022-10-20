@@ -10,6 +10,12 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+model Channels {
+  guildId String @id
+  announcementChannel String
+  announcementTicketChannel String
+}
+
 model Announcement {
   id    Int     @id @default(autoincrement())
   title String

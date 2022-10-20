@@ -1,5 +1,4 @@
-import { ActivityType, CommandInteraction, GuildMemberRoleManager, SlashCommandIntegerOption } from "discord.js";
-import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, ButtonInteraction, CacheType } from 'discord.js';
+import { ActivityType, CommandInteraction, GuildMemberRoleManager, SlashCommandIntegerOption, SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, ButtonInteraction, CacheType } from "discord.js";
 import { setWeek, createEmbed, weekData } from '../helpers/weeklySchedule';
 
 module.exports = {
