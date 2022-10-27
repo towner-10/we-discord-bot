@@ -113,14 +113,26 @@ export async function createEmbed(className?: string) {
 
         if (notes !== null) {
             if (notes.length > 0) {
-                let noteText = "";
+                let noteText = "> ";
 
                 notes.forEach((note: RichTextItemResponse) => {
-                    noteText += `${note.plain_text}\n`;
+                    let noteTextPart = note.plain_text;
+
+                    if (note.annotations.bold) noteTextPart = '**' + noteTextPart + '**';
+                    if (note.annotations.italic) noteTextPart = '*' + noteTextPart + '*';
+                    if (note.annotations.strikethrough) noteTextPart = '~~' + noteTextPart + '~~';
+                    if (note.annotations.underline) noteTextPart = '__' + noteTextPart + '__';
+                    if (note.annotations.code) noteTextPart = '`' + noteTextPart + '`';
+
+                    noteTextPart = noteTextPart.replace('\n', '\n> ');
+
+                    noteText += noteTextPart;
                 });
 
-                text += `\`\`\`${noteText}\`\`\``;
+                text += noteText;
             }
+
+            text += '\n';
         }
 
         return {

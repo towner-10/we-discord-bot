@@ -1,4 +1,4 @@
-import { Announcement, Channels, PrismaClient } from '@prisma/client'
+import { Announcement, Guild, PrismaClient } from '@prisma/client'
 
 export default class Database {
 
@@ -10,23 +10,23 @@ export default class Database {
         this.client = new PrismaClient();
     }
 
-    public async setAnnouncementChannel(announcementChannel: string, guild: string): Promise<void> {
+    public async setAnnouncementChannel(announcementChannel: string, guildId: string): Promise<void> {
         try {
-            await this.client.channels.upsert({
+            await this.client.guild.upsert({
                 where: {
-                    guildId: guild,
+                    guildId: guildId,
                 },
                 update: {
                     announcementChannel: announcementChannel
                 },
                 create: {
-                    guildId: guild,
+                    guildId: guildId,
                     announcementChannel: announcementChannel,
                     announcementTicketChannel: "",
                 }
             });
 
-            console.log(`✅ Announcement channel set to ${announcementChannel} for guild ${guild}`);
+            console.log(`✅ Announcement channel set to ${announcementChannel} for guild ${guildId}`);
 
             return;
         }
@@ -35,23 +35,23 @@ export default class Database {
         }
     }
 
-    public async setAnnouncementTicketChannel(announcementTicketChannel: string, guild: string): Promise<void> {
+    public async setAnnouncementTicketChannel(announcementTicketChannel: string, guildId: string): Promise<void> {
         try {
-            await this.client.channels.upsert({
+            await this.client.guild.upsert({
                 where: {
-                    guildId: guild,
+                    guildId: guildId,
                 },
                 update: {
                     announcementTicketChannel: announcementTicketChannel
                 },
                 create: {
-                    guildId: guild,
+                    guildId: guildId,
                     announcementChannel: "",
                     announcementTicketChannel: announcementTicketChannel,
                 }
             });
 
-            console.log(`✅ Announcement ticket channel set to ${announcementTicketChannel} for guild ${guild}`);
+            console.log(`✅ Announcement ticket channel set to ${announcementTicketChannel} for guild ${guildId}`);
 
             return;
         }
@@ -60,18 +60,17 @@ export default class Database {
         }
     }
 
-    public async getAnnouncementChannel(guild: string): Promise<Channels | null> {
+    public async getAnnouncementChannel(guildId: string): Promise<string | null> {
         try {
-            const channel = await this.client.channels.findUnique({
+            const guild = await this.client.guild.findUnique({
                 where: {
-                    guildId: guild
+                    guildId: guildId
                 }
             });
 
-            if (!channel) return null;
-            if (channel.announcementChannel === "") return null;
+            if (!guild) return null;
 
-            return channel;
+            return guild.announcementChannel;
         }
         catch (error) {
             console.error(error);
@@ -80,18 +79,34 @@ export default class Database {
         return null;
     }
 
-    public async getAnnouncementTicketChannel(guild: string): Promise<Channels | null> {
+    public async getAnnouncementTicketChannel(guildId: string): Promise<string | null> {
         try {
-            const channel = await this.client.channels.findUnique({
+            const guild = await this.client.guild.findUnique({
                 where: {
-                    guildId: guild
+                    guildId: guildId
                 }
             });
 
-            if (!channel) return null;
-            if (channel.announcementTicketChannel === "") return null;
+            if (!guild) return null;
 
-            return channel;
+            return guild.announcementTicketChannel;
+        }
+        catch (error) {
+            console.error(error);
+        }
+
+        return null;
+    }
+
+    public async getGuild(guildId: string): Promise<Guild | null> {
+        try {
+            const guild = await this.client.guild.findUnique({
+                where: {
+                    guildId: guildId
+                }
+            });
+
+            return guild;
         }
         catch (error) {
             console.error(error);
@@ -111,7 +126,7 @@ export default class Database {
                         content: content,
                         image: image,
                         user: user,
-                        guild: guild,
+                        guildId: guild,
                         message: message
                     }
                 });
@@ -128,7 +143,7 @@ export default class Database {
                     image: "",
                     user: user,
                     message: message,
-                    guild: guild
+                    guildId: guild,
                 }
             });
 

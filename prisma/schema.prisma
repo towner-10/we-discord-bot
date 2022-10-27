@@ -10,20 +10,24 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-model Channels {
-  guildId String @id
-  announcementChannel String
+model Guild {
+  guildId                   String         @id
+  announcementChannel       String
   announcementTicketChannel String
+  currentWeek               Int            @default(1)
+  notionDatabaseId          String         @default("6aacedd4ae4b414b8aca407f7ea3396b")
+  announcements             Announcement[]
 }
 
 model Announcement {
-  id    Int     @id @default(autoincrement())
-  title String
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  title       String
   description String
-  content String
-  image String
-  user String
-  guild String
-  message String
-  createdAt DateTime @default(now())
+  content     String
+  image       String
+  user        String
+  guildId     String
+  message     String
+  guild       Guild    @relation(fields: [guildId], references: [guildId])
 }

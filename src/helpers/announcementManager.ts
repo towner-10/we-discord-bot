@@ -21,20 +21,20 @@ export default class AnnouncementManager {
 
         // Read all announcements from the database in sequence to prevent multiple channels being created at once
         for (const announcement of announcements) {
-            const guild = await client.guilds.fetch(announcement.guild);
+            const guild = await client.guilds.fetch(announcement.guildId);
 
             // If the collector for the guild already exists, return
-            if (this.collectors.has(announcement.guild)) return;
+            if (this.collectors.has(announcement.guildId)) return;
 
             // Get the announcement ticket channel
             const ticketsChannel = await this.getAnnouncementTicketsChannel(guild);
 
             // Create the collector for the channel
             const collector = ticketsChannel.createMessageComponentCollector({ componentType: ComponentType.Button });
-            this.collectors.set(announcement.guild, collector);
+            this.collectors.set(announcement.guildId, collector);
 
             // Set up the collector
-            await this.setupCollector(this.collectors.get(announcement.guild), guild);
+            await this.setupCollector(this.collectors.get(announcement.guildId), guild);
         }
     }
 
@@ -45,13 +45,13 @@ export default class AnnouncementManager {
      */
     private async getAnnouncementTicketsChannel(guild: Guild): Promise<TextChannel> {
         // Get the announcement channel from the database
-        const channels = await this.database.getAnnouncementTicketChannel(guild.id);
+        const announcementTicketChannel = await this.database.getAnnouncementTicketChannel(guild.id);
 
         let channel: TextChannel | null = null;
 
-        if (channels && channels.announcementTicketChannel !== "") {
+        if (announcementTicketChannel) {
             try {
-                channel = await guild.channels.fetch(channels.announcementTicketChannel) as TextChannel;
+                channel = await guild.channels.fetch(announcementTicketChannel) as TextChannel;
             } catch (error) {
                 channel = null;
             }
@@ -86,7 +86,7 @@ export default class AnnouncementManager {
             await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
         }
         // If channel is not in database but in cache 
-        else if (!channels && channel) {
+        else if (!announcementTicketChannel && channel) {
             await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
         }
 
@@ -102,13 +102,13 @@ export default class AnnouncementManager {
      */
     private async getAnnouncementChannel(guild: Guild): Promise<TextChannel> {
         // Get the announcement channel from the database
-        const channels = await this.database.getAnnouncementChannel(guild.id);
+        const announcementChannel = await this.database.getAnnouncementChannel(guild.id);
 
         let channel: TextChannel | null = null;
 
-        if (channels && channels.announcementChannel !== "") {
+        if (announcementChannel) {
             try {
-                channel = await guild.channels.fetch(channels.announcementChannel) as TextChannel;
+                channel = await guild.channels.fetch(announcementChannel) as TextChannel;
             } catch (error) {
                 channel = null;
             }
@@ -124,7 +124,7 @@ export default class AnnouncementManager {
             await this.database.setAnnouncementChannel(channel.id, guild.id);
         }
         // If channel is not in database but in cache 
-        else if (!channels && channel) {
+        else if (!announcementChannel && channel) {
             await this.database.setAnnouncementChannel(channel.id, guild.id);
         }
 
@@ -191,7 +191,7 @@ export default class AnnouncementManager {
 
                     // Send the announcement
                     await announcementChannel.send({
-                        content: `__**${announcement.title}**__\n${announcement.description}\n\n>>> ${announcement.content}\n\n- ${(await guild.client.users.fetch(announcement.user)).toString()}`,
+                        content: `__**${announcement.title}**__\n${announcement.description}\n>>> ${announcement.content}\n\n- ${(await guild.client.users.fetch(announcement.user)).toString()}`,
                         files: announcement.image ? [announcement.image] : []
                     });
 
