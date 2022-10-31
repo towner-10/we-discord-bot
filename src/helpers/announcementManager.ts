@@ -1,6 +1,7 @@
 import { Announcement } from "@prisma/client";
 import { ActionRowBuilder, Attachment, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, ChannelType, Client, ComponentType, EmbedBuilder, Guild, InteractionCollector, Message, OverwriteResolvable, OverwriteType, PermissionFlagsBits, TextChannel, User } from "discord.js";
 import Database from "./database";
+import { logger } from "./logging";
 
 export default class AnnouncementManager {
 
@@ -135,14 +136,10 @@ export default class AnnouncementManager {
 
     public async setAnnouncementChannel(guild: Guild, channel: TextChannel): Promise<void> {
         await this.database.setAnnouncementChannel(channel.id, guild.id);
-
-        console.log(`✅ Announcement channel set to ${channel.name} (${channel.id})`);
     }
 
     public async setAnnouncementTicketsChannel(guild: Guild, channel: TextChannel): Promise<void> {
         await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
-
-        console.log(`✅ Announcement tickets channel set to ${channel.name} (${channel.id})`);
     }
 
     private async setupCollector(collector: InteractionCollector<ButtonInteraction<CacheType>> | undefined, guild: Guild): Promise<void> {
@@ -172,7 +169,7 @@ export default class AnnouncementManager {
 
                     await interaction.update({ content: `This announcement has been posted.`, components: [] });
                 } catch (error) {
-                    console.log(error);
+                    logger.error(String(error));
                     await interaction.update({ content: 'An error occurred while posting the announcement.' });
                 }
             } else if (interaction.customId.startsWith('send-announcement-')) {
@@ -197,7 +194,7 @@ export default class AnnouncementManager {
 
                     await interaction.update({ content: `This announcement has been posted.`, components: [] });
                 } catch (error) {
-                    console.log(error);
+                    logger.error(String(error));
                     await interaction.update({ content: 'An error occurred while posting the announcement.' });
                 }
             } else if (interaction.customId.startsWith('delete-announcement-')) {

@@ -1,4 +1,5 @@
 import { ActivityType, CommandInteraction, GuildMemberRoleManager, SlashCommandIntegerOption, SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, ButtonInteraction, CacheType } from "discord.js";
+import { logger } from "../helpers/logging";
 import { setWeek, createEmbed, weekData } from '../helpers/weeklySchedule';
 
 module.exports = {
@@ -39,7 +40,7 @@ module.exports = {
                                                         await buttonInteraction.update({ content: "This is what the schedule will look like...", embeds: [await createEmbed()] });
                                                         return;
                                         }
-                                        console.log("Button interaction not handled");
+                                        logger.warn(`Unknown button id: ${buttonInteraction.customId}`);
                                 }
                         });
                 } else {

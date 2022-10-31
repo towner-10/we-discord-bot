@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 
 import currentWeek from "../currentWeek.json";
 import { NameNotion, NotesNotion } from "src/types/notion";
+import { logger } from "./logging";
 
 export let weekData = currentWeek;
 
@@ -71,7 +72,7 @@ export async function setWeek(week: number) {
         return false;
     }
 
-    console.log(`✅ Updated the week to ${week}`);
+    logger.success(`Week set to ${week}`);
     weekData = json;
     return true;
 }
@@ -172,7 +173,7 @@ export async function createEmbed(className?: string) {
 
         scheduleEmbed.addFields(fields);
 
-        console.log(`✅ Created schedule for ${className} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
+        logger.success(`Schedule for ${className} created`);
 
         return scheduleEmbed;
     }
@@ -226,7 +227,7 @@ export async function createEmbed(className?: string) {
 
     scheduleEmbed.addFields(fields);
 
-    console.log(`✅ Created schedule for Week ${weekData.week} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
+    logger.success(`Schedule created for all classes`);
 
     return scheduleEmbed;
 }

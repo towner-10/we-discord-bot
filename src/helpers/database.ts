@@ -1,4 +1,5 @@
 import { Announcement, Guild, PrismaClient } from '@prisma/client'
+import { logger } from './logging';
 
 export default class Database {
 
@@ -26,7 +27,7 @@ export default class Database {
                 }
             });
 
-            console.log(`✅ Announcement channel set to ${announcementChannel} for guild ${guildId}`);
+            logger.info(`Announcement channel set to ${announcementChannel} for guild ${guildId}`);
 
             return;
         }
@@ -51,7 +52,7 @@ export default class Database {
                 }
             });
 
-            console.log(`✅ Announcement ticket channel set to ${announcementTicketChannel} for guild ${guildId}`);
+            logger.info(`Announcement ticket channel set to ${announcementTicketChannel} for guild ${guildId}`);
 
             return;
         }
@@ -116,7 +117,7 @@ export default class Database {
     }
 
     public async createAnnouncement(title: string, description: string, content: string, user: string, guild: string, message: string, image?: string): Promise<Announcement | null> {
-        console.log(`📝 Creating announcement with title: ${title}`);
+        logger.waiting(`Creating announcement...`);
         try {
             if (image) {
                 const announcement = await this.client.announcement.create({
@@ -131,7 +132,7 @@ export default class Database {
                     }
                 });
 
-                console.log(`✅ Announcement created with id: ${announcement.id}`);
+                logger.success(`Announcement created with id: ${announcement.id}`);
 
                 return announcement;
             }
@@ -147,7 +148,7 @@ export default class Database {
                 }
             });
 
-            console.log(`✅ Announcement created with id: ${announcement.id}`);
+            logger.success(`Announcement created with id: ${announcement.id}`);
 
             return announcement;
         }
@@ -166,7 +167,12 @@ export default class Database {
                 }
             });
 
-            console.log(`✅ Announcement found with id: ${announcement?.id}`);
+            if (!announcement) {
+                logger.warn(`Announcement with id ${id} not found`);
+                return null;
+            }
+
+            logger.info(`Announcement found with id: ${announcement?.id}`);
 
             return announcement;
         }
@@ -185,7 +191,12 @@ export default class Database {
                 }
             });
 
-            console.log(`✅ Announcements found: ${announcements.length}`);
+            if (announcements.length === 0) {
+                logger.warn(`No announcements found for user ${user}`);
+                return [];
+            }
+
+            logger.info(`Announcements found for user ${user}: ${announcements.length}`);
 
             return announcements;
         }
@@ -200,7 +211,12 @@ export default class Database {
         try {
             const announcements = await this.client.announcement.findMany();
 
-            console.log(`✅ Announcements found: ${announcements.length}`);
+            if (announcements.length === 0) {
+                logger.warn(`No announcements found`);
+                return null;
+            }
+
+            logger.info(`Announcements found: ${announcements.length}`);
 
             return announcements;
         }
@@ -219,7 +235,12 @@ export default class Database {
                 }
             });
 
-            console.log(`✅ Announcement deleted with id: ${announcement.id}`);
+            if (!announcement) {
+                logger.warn(`Announcement with id ${id} not found`);
+                return null;
+            }
+
+            logger.success(`Announcement deleted with id: ${announcement.id}`);
 
             return announcement;
         }
