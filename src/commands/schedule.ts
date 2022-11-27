@@ -24,7 +24,9 @@ module.exports = {
         async execute(interaction: CommandInteraction) {
                 // If the user did not provide a class, return an the entire schedule
                 if (!interaction.options.get('class')) {
-                        return await interaction.reply({ embeds: [await createEmbed()] });
+                        if (!interaction.guildId) return await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+
+                        return await interaction.reply({ embeds: [await createEmbed(interaction.guildId)] });
                 }
 
                 // Depending on the class, create and send an embed for that classes schedule for the current week.
