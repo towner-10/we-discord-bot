@@ -3,10 +3,10 @@ dotenv.config();
 
 import fs from 'node:fs';
 import path from 'node:path';
-import dayjs from 'dayjs';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { Command } from './types/command';
 import { Event } from './types/event';
+import { logger } from './helpers/logging';
 
 const client = new Client(
     {
@@ -47,9 +47,9 @@ eventFiles.forEach((file: string) => {
 });
 
 const exitProcess = () => {
-    console.log('\n⏳ Stopping bot...');
+    logger.waiting('Exiting...');
     client.destroy();
-    console.log(`✅ Bot stopped. Goodbye! - ${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
+    logger.success('Bot stopped.');
 }
 
 process.on('SIGINT', () => exitProcess());

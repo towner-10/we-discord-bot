@@ -3,23 +3,28 @@ import { EmbedField } from "src/types/embedField";
 
 import { EmbedBuilder } from "discord.js";
 
-import fs from 'fs';
 import { Client, isFullPage } from "@notionhq/client";
 import { DatePropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, PageObjectResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import dayjs from 'dayjs';
 
-import currentWeek from "../currentWeek.json";
 import { NameNotion, NotesNotion } from "src/types/notion";
-
-export let weekData = currentWeek;
+import { logger } from "./logging";
+import Database from "./database";
 
 const notion = new Client({
     auth: process.env.NOTION_TOKEN,
 });
 
-async function fetchSchedule(className?: string) {
+const database = Database.getInstance();
+
+async function fetchSchedule(guildId: string, className?: string) {
     if (!process.env.NOTION_DATABASE_ID) throw new Error("No database ID provided");
 
+    const week = await database.guilds.currentWeek.get(guildId);
+
+    if (!week) throw new Error("No week found");
+
+    // TODO: Add error handling for Notion API
     if (className) {
         const scheduleData = await notion.databases.query({
             database_id: process.env.NOTION_DATABASE_ID,
@@ -34,7 +39,7 @@ async function fetchSchedule(className?: string) {
                     {
                         property: 'Tags',
                         multi_select: {
-                            contains: `Week ${weekData.week}`,
+                            contains: `Week ${week}`,
                         }
                     },
                 ],
@@ -49,7 +54,7 @@ async function fetchSchedule(className?: string) {
         filter: {
             property: 'Tags',
             multi_select: {
-                contains: `Week ${weekData.week}`,
+                contains: `Week ${week}`,
             }
         }
     });
@@ -57,31 +62,12 @@ async function fetchSchedule(className?: string) {
     return scheduleData.results;
 }
 
-
-/**
- * Set the current week and write it to the storage file.
- */
-export async function setWeek(week: number) {
-    const json = { "week": week };
-
-    try {
-        await fs.promises.writeFile('./src/currentWeek.json', JSON.stringify(json));
-    } catch (err) {
-        console.error(`❌ Error writing file: ${err}`);
-        return false;
-    }
-
-    console.log(`✅ Updated the week to ${week}`);
-    weekData = json;
-    return true;
-}
-
 /**
  * Creates an embed with the current weeks schedule.
  * @param {*} className The name of the class to get the schedule for.
  * @returns Either an Embed containing the weekly schedule, weekly schedule for a specific class, or an error message.
  */
-export async function createEmbed(className?: string) {
+export async function createEmbed(guildId: string, className?: string) {
     const scheduleEmbed = new EmbedBuilder().setColor(0x9a6dbe).setFooter({
         text: `Created by WE Discord Bot`
     }).setTimestamp();
@@ -113,14 +99,26 @@ export async function createEmbed(className?: string) {
 
         if (notes !== null) {
             if (notes.length > 0) {
-                let noteText = "";
+                let noteText = "> ";
 
                 notes.forEach((note: RichTextItemResponse) => {
-                    noteText += `${note.plain_text}\n`;
+                    let noteTextPart = note.plain_text;
+
+                    if (note.annotations.bold) noteTextPart = '**' + noteTextPart + '**';
+                    if (note.annotations.italic) noteTextPart = '*' + noteTextPart + '*';
+                    if (note.annotations.strikethrough) noteTextPart = '~~' + noteTextPart + '~~';
+                    if (note.annotations.underline) noteTextPart = '__' + noteTextPart + '__';
+                    if (note.annotations.code) noteTextPart = '`' + noteTextPart + '`';
+
+                    noteTextPart = noteTextPart.replace('\n', '\n> ');
+
+                    noteText += noteTextPart;
                 });
 
-                text += `\`\`\`${noteText}\`\`\``;
+                text += noteText;
             }
+
+            text += '\n';
         }
 
         return {
@@ -129,11 +127,15 @@ export async function createEmbed(className?: string) {
         };
     };
 
+    const week = await database.guilds.currentWeek.get(guildId);
+
+    if (!week) throw new Error("No week found");
+
     // If a class name was provided, only show the schedule for that class.
     if (className) {
 
         // Generate embed for the schedule
-        scheduleEmbed.setTitle(`${className} - Week ${weekData.week}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
+        scheduleEmbed.setTitle(`${className} - Week ${week}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
 
         // Get the schedule for the class
         const scheduleData = await fetchSchedule(className);
@@ -160,16 +162,16 @@ export async function createEmbed(className?: string) {
 
         scheduleEmbed.addFields(fields);
 
-        console.log(`✅ Created schedule for ${className} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
+        logger.success(`Schedule for ${className} created`);
 
         return scheduleEmbed;
     }
 
-    const scheduleData = await fetchSchedule();
+    const scheduleData = await fetchSchedule(guildId);
     if (scheduleData === undefined || scheduleData.length === 0) return scheduleEmbed.setDescription("No schedule data found for this week.");
 
     // Generate embed for the schedule with all classes
-    scheduleEmbed.setTitle(`Week ${weekData.week}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
+    scheduleEmbed.setTitle(`Week ${week}`).setURL('https://spotless-value-235.notion.site/6aacedd4ae4b414b8aca407f7ea3396b?v=56fd0036dc974da2b6699d06fc6999c0');
     const fields: EmbedField[] = [];
 
     const classes: ClassMap = {
@@ -214,7 +216,7 @@ export async function createEmbed(className?: string) {
 
     scheduleEmbed.addFields(fields);
 
-    console.log(`✅ Created schedule for Week ${weekData.week} at ${dayjs().format('MM/DD/YYYY hh:mm A')}`);
+    logger.success(`Schedule created for all classes`);
 
     return scheduleEmbed;
 }

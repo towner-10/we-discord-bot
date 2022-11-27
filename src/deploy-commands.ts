@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { Command } from './types/command';
+import { logger } from './helpers/logging';
 
 const getCommands = async () => {
 	const result: unknown[] = [];
@@ -27,13 +28,13 @@ const getCommands = async () => {
 
 	try {
 		if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID) {
-			console.log('Please provide a Discord token and client ID');
+			logger.error('Missing DISCORD_TOKEN or CLIENT_ID in .env file');
 			throw new Error('Missing Discord token or client ID');
 		}
 
 		const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 		await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-		console.log('✅ Successfully registered application commands.');
+		logger.success('Registered application commands.');
 	} catch (error) {
 		console.error(error);
 	}

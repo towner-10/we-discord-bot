@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import { CommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import Database from "../helpers/database";
 
@@ -15,7 +14,7 @@ module.exports = {
     async execute(interaction: CommandInteraction) {
         const id = interaction.options.get('id')?.value as number;
 
-        const announcement = await Database.getInstance().getAnnouncement(id);
+        const announcement = await Database.getInstance().announcements.get(id);
 
         if (announcement === null) return await interaction.reply({ content: `Could not find announcement with ticket ID: ${id}`, ephemeral: true });
         if (announcement.user !== interaction.user.id) return await interaction.reply({ content: `You do not have permission to delete this announcement.`, ephemeral: true });
