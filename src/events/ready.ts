@@ -1,6 +1,5 @@
-import { ActivityType, Client, Events } from "discord.js";
+import { Client, Events } from "discord.js";
 import AnnouncementManager from "../helpers/announcementManager";
-import { weekData } from "../helpers/weeklySchedule";
 import { logger } from "../helpers/logging";
 
 module.exports = {
@@ -11,6 +10,5 @@ module.exports = {
 
         logger.success('Ready!');
         logger.info(`Logged in as: ${client.user?.tag}`);
-        client.user?.setActivity(`Week ${weekData.week}`, { type: ActivityType.Watching })
     }
 }

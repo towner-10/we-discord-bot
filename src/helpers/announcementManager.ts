@@ -16,7 +16,7 @@ export default class AnnouncementManager {
     }
 
     public async init(client: Client): Promise<void> {
-        const announcements = await this.database.getAnnouncements();
+        const announcements = await this.database.announcements.getAll();
 
         if (!announcements) return;
 
@@ -46,7 +46,7 @@ export default class AnnouncementManager {
      */
     private async getAnnouncementTicketsChannel(guild: Guild): Promise<TextChannel> {
         // Get the announcement channel from the database
-        const announcementTicketChannel = await this.database.getAnnouncementTicketChannel(guild.id);
+        const announcementTicketChannel = await this.database.guilds.channels.announcementTickets.get(guild.id);
 
         let channel: TextChannel | null = null;
 
@@ -84,11 +84,11 @@ export default class AnnouncementManager {
                 permissionOverwrites: permissions
             });
 
-            await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
+            await this.database.guilds.channels.announcementTickets.set(channel.id, guild.id);
         }
         // If channel is not in database but in cache 
         else if (!announcementTicketChannel && channel) {
-            await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
+            await this.database.guilds.channels.announcementTickets.set(channel.id, guild.id);
         }
 
         if (!channel) throw new Error('Channel not found.');
@@ -103,7 +103,7 @@ export default class AnnouncementManager {
      */
     private async getAnnouncementChannel(guild: Guild): Promise<TextChannel> {
         // Get the announcement channel from the database
-        const announcementChannel = await this.database.getAnnouncementChannel(guild.id);
+        const announcementChannel = await this.database.guilds.channels.announcements.get(guild.id);
 
         let channel: TextChannel | null = null;
 
@@ -122,11 +122,11 @@ export default class AnnouncementManager {
                 type: ChannelType.GuildText
             });
 
-            await this.database.setAnnouncementChannel(channel.id, guild.id);
+            await this.database.guilds.channels.announcements.set(channel.id, guild.id);
         }
         // If channel is not in database but in cache 
         else if (!announcementChannel && channel) {
-            await this.database.setAnnouncementChannel(channel.id, guild.id);
+            await this.database.guilds.channels.announcements.set(channel.id, guild.id);
         }
 
         if (!channel) throw new Error('Channel not found.');
@@ -135,11 +135,11 @@ export default class AnnouncementManager {
     }
 
     public async setAnnouncementChannel(guild: Guild, channel: TextChannel): Promise<void> {
-        await this.database.setAnnouncementChannel(channel.id, guild.id);
+        await this.database.guilds.channels.announcements.set(channel.id, guild.id);
     }
 
     public async setAnnouncementTicketsChannel(guild: Guild, channel: TextChannel): Promise<void> {
-        await this.database.setAnnouncementTicketChannel(channel.id, guild.id);
+        await this.database.guilds.channels.announcementTickets.set(channel.id, guild.id);
     }
 
     private async setupCollector(collector: InteractionCollector<ButtonInteraction<CacheType>> | undefined, guild: Guild): Promise<void> {
@@ -150,7 +150,7 @@ export default class AnnouncementManager {
             if (interaction.customId.startsWith('send-announcement-everyone-')) {
                 const id = interaction.customId.split('-')[3];
 
-                const announcement = await this.database.getAnnouncement(parseInt(id));
+                const announcement = await this.database.announcements.get(parseInt(id));
 
                 if (!announcement) {
                     await interaction.update({ content: 'An error occurred while posting the announcement.' });
@@ -175,7 +175,7 @@ export default class AnnouncementManager {
             } else if (interaction.customId.startsWith('send-announcement-')) {
                 const id = interaction.customId.split('-')[2];
 
-                const announcement = await this.database.getAnnouncement(parseInt(id));
+                const announcement = await this.database.announcements.get(parseInt(id));
 
                 if (!announcement) {
                     await interaction.update({ content: 'An error occurred while posting the announcement.' });
@@ -220,7 +220,7 @@ export default class AnnouncementManager {
 
         const message = await ticketsChannel.send({ content: 'Creating announcement ticket...' }) as Message;
 
-        const announcement = await Database.getInstance().createAnnouncement(title, description, content, user.id, guild.id, message.id, image?.url);
+        const announcement = await Database.getInstance().announcements.create(title, description, content, user.id, guild.id, message.id, image?.url);
 
         if (!announcement) return null;
 
@@ -249,7 +249,7 @@ export default class AnnouncementManager {
     }
 
     public async deleteAnnouncement(id: number, guild: Guild): Promise<Announcement | null> {
-        const announcement = await Database.getInstance().deleteAnnouncement(id);
+        const announcement = await Database.getInstance().announcements.delete(id);
 
         if (!announcement) return null;
 
