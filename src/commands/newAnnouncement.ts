@@ -60,7 +60,14 @@ module.exports = {
             if (title && description && content) {
                 if (!interaction.guild) return await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
 
-                const announcement = await AnnouncementManager.getInstance().createAnnouncement(title, description, content, interaction.user, interaction.guild, image);
+                const announcement = await AnnouncementManager.getInstance().createAnnouncement({
+                    title, 
+                    description, 
+                    content,
+                    user: interaction.user,
+                    guild: interaction.guild,
+                    image
+                });
 
                 if (announcement === null) return await submitted.reply({ content: `Could not create announcement.`, ephemeral: true });
 

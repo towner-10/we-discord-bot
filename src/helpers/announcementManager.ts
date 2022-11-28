@@ -1,5 +1,6 @@
 import { Announcement } from "@prisma/client";
-import { ActionRowBuilder, Attachment, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, ChannelType, Client, ComponentType, EmbedBuilder, Guild, InteractionCollector, Message, OverwriteResolvable, OverwriteType, PermissionFlagsBits, TextChannel, User } from "discord.js";
+import { ActionRowBuilder, Attachment, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, ChannelType, Client, ComponentType, EmbedBuilder, Guild, InteractionCollector, Message, OverwriteResolvable, OverwriteType, PermissionFlagsBits, TextChannel } from "discord.js";
+import { CreateAnnouncementDiscord } from "src/types/createAnnouncement";
 import Database from "./database";
 import { logger } from "./logging";
 
@@ -205,7 +206,24 @@ export default class AnnouncementManager {
         });
     }
 
-    public async createAnnouncement(title: string, description: string, content: string, user: User, guild: Guild, image?: Attachment): Promise<Announcement | null> {
+    /**
+     * Creates a new announcement.
+     * @param title The title of the announcement
+     * @param description The description of the announcement
+     * @param content The content of the announcement
+     * @param image The image of the announcement
+     * @param user The user who created the announcement
+     * @param guild The guild to create the announcement in
+     * @returns The announcement (null if error)
+     */
+    public async createAnnouncement({
+        title,
+        description,
+        content,
+        user,
+        guild,
+        image
+    }: CreateAnnouncementDiscord): Promise<Announcement | null> {
         // Get the announcement ticket channel
         const ticketsChannel = await this.getAnnouncementTicketsChannel(guild);
 
@@ -220,7 +238,15 @@ export default class AnnouncementManager {
 
         const message = await ticketsChannel.send({ content: 'Creating announcement ticket...' }) as Message;
 
-        const announcement = await Database.getInstance().announcements.create(title, description, content, user.id, guild.id, message.id, image?.url);
+        const announcement = await Database.getInstance().announcements.create({
+            title,
+            description,
+            content,
+            user: user.id,
+            guild: guild.id,
+            message: message.id,
+            image: image?.url
+        });
 
         if (!announcement) return null;
 

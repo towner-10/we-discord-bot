@@ -1,5 +1,6 @@
 import { Announcement, Guild, PrismaClient } from '@prisma/client'
 import { logger } from './logging';
+import type { CreateAnnouncement } from '../types/createAnnouncement';
 
 export default class Database {
 
@@ -74,7 +75,15 @@ export default class Database {
          * @param image The image of the announcement
          * @returns The created announcement
          */
-        create: async (title: string, description: string, content: string, user: string, guild: string, message: string, image?: string): Promise<Announcement | null> => {
+        create: async ({
+            title,
+            description,
+            content,
+            user,
+            guild,
+            message,
+            image
+        }: CreateAnnouncement): Promise<Announcement | null> => {
             logger.waiting(`Creating announcement...`);
             try {
                 if (image) {
