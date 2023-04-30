@@ -4,8 +4,8 @@ dotenv.config();
 import fs from 'node:fs';
 import path from 'node:path';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
-import { Command } from './types/command';
-import { Event } from './types/event';
+import type { Command } from './types/command';
+import type { Event } from './types/event';
 import { logger } from './helpers/logging';
 
 const client = new Client(

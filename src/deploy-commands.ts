@@ -1,12 +1,12 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { Routes } from 'discord.js';
 import { REST } from '@discordjs/rest';
-import dotenv from 'dotenv';
-dotenv.config();
-
-import { Command } from './types/command';
 import { logger } from './helpers/logging';
+import type { Command } from './types/command';
 
 const getCommands = async () => {
 	const result: unknown[] = [];

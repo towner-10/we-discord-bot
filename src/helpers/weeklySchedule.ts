@@ -1,13 +1,10 @@
-import { ClassMap } from "src/types/classMap";
-import { EmbedField } from "src/types/embedField";
-
+import type { ClassMap } from "src/types/classMap";
+import type { EmbedField } from "src/types/embedField";
+import type { NameNotion, NotesNotion } from "src/types/notion";
 import { EmbedBuilder } from "discord.js";
-
 import { Client, isFullPage } from "@notionhq/client";
 import { DatePropertyItemObjectResponse, MultiSelectPropertyItemObjectResponse, PageObjectResponse, RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import dayjs from 'dayjs';
-
-import { NameNotion, NotesNotion } from "src/types/notion";
 import { logger } from "./logging";
 import Database from "./database";
 

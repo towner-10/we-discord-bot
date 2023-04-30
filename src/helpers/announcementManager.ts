@@ -1,8 +1,9 @@
 import { Announcement } from "@prisma/client";
 import { ActionRowBuilder, Attachment, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, ChannelType, Client, ComponentType, EmbedBuilder, Guild, InteractionCollector, Message, OverwriteResolvable, OverwriteType, PermissionFlagsBits, TextChannel } from "discord.js";
-import { CreateAnnouncementDiscord } from "src/types/createAnnouncement";
 import Database from "./database";
 import { logger } from "./logging";
+
+import type { CreateAnnouncementDiscord } from "src/types/createAnnouncement";
 
 export default class AnnouncementManager {
 
